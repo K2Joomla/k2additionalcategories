@@ -1,11 +1,13 @@
 <?php
 /**
- * @version 1.0.1
+ * @version 1.0.2
  * @package Additional Categories for K2 (plugin)
- * @author Thodoris Bgenopoulos <teobgeno@netpin.gr>
- * @link http://www.netpin.gr
- * @copyright Copyright (c) 2012 netpin.gr
+ * @author Thodoris Bgenopoulos <teobgeno@netpin.gr>, bugfixed by Robert Heine (rh@pixelmechanics.de)
+ * @link http://pixelmechanics.de and http://www.netpin.gr
+ * @copyright Copyright (c) 2015 Robert Heine and 2012 netpin.gr
  * @license GNU/GPL license: http://www.gnu.org/copyleft/gpl.html
+ *
+ * @changed: 11.06.2015: Bugfixes when adding a new k2-item and removed "=& JFACTORY" because of strict-error message with newer PHP versions
  */
 
 
@@ -46,12 +48,12 @@ class plgK2k2additonalcategories extends K2Plugin {
 	function onK2BeforeSetQuery(&$query)
 	{
 	  
-	  $mainframe = &JFactory::getApplication();
+	  $mainframe = JFactory::getApplication(); // PM RH: Strict Standards: not assign by reference here.
 	  $query_parts=explode('WHERE',$query);
-	  
 	  //admin backend area
 	  if($mainframe->isAdmin())
 	  {
+	  
 	      //filter by category
 		  if (preg_match("/i.catid IN \([\d,]+\)/",$query_parts[1], $matches, PREG_OFFSET_CAPTURE) > 0)
 		  {
@@ -246,7 +248,7 @@ class plgK2k2additonalcategories extends K2Plugin {
 		 $language = JFactory::getLanguage();
          $language->load('com_k2additionalcategories');
 		 $plugin->set('name', JText::_( 'COM_K2ADDITIONALCATEGORIES_LBL' ));
-		 $db = &JFactory::getDBO();
+		 $db = JFactory::getDBO(); // PM RH: Don't assign by reference / strict standards
 		 $query = 'SELECT m.* FROM #__k2_categories AS m WHERE m.`trash` = 0 ORDER BY `parent`, `ordering`';
 		 $db->setQuery( $query );
 		 $mitems = $db->loadObjectList();
@@ -275,17 +277,20 @@ class plgK2k2additonalcategories extends K2Plugin {
 			$mitems[] = JHTML::_('select.option',  $i->id, '   '.$i->treename );
 		 }
 		 $sel_value=array();
-		 $query = "SELECT `catid` FROM #__k2_additional_categories WHERE `itemID` = {intval($item->id)}";
-		 $db->setQuery( $query );
-		 if (version_compare(JVERSION, '1.6.0', '<'))
-		 {
-			$sel_value = $db->loadResultArray();
-		 }
-		 else
-		 {
-			$sel_value = $db->loadColumn();
-		 }
 		 
+		 // PM RH: Avoid Error-MEssages when creating new K2 items, which means, there is no ID.
+		 if ($item->id>0) {
+			 $query = "SELECT `catid` FROM #__k2_additional_categories WHERE `itemID` = {intval($item->id)}";
+			 $db->setQuery( $query );
+			 if (version_compare(JVERSION, '1.6.0', '<'))
+			 {
+				$sel_value = $db->loadResultArray();
+			 }
+			 else
+			 {
+				$sel_value = $db->loadColumn();
+			 }
+		 }
 		
 		 $fields=JHTML::_('select.genericlist',  $mitems,'itm_add_catids[]', 'class="inputbox" style="width:100%;" multiple="multiple" size="10"', 'value', 'text', $sel_value );
 		
